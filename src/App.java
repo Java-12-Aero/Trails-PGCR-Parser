@@ -31,14 +31,12 @@ public class App {
         JsonParser jParser = jFactory.createParser(outStr);
         while(jParser.nextToken() != null){
             String fieldName = jParser.getCurrentName();
-            System.out.println(fieldName);
+            //System.out.println(fieldName);
             if("activityDetails".equals(fieldName)){
                 while(jParser.nextToken() != JsonToken.END_OBJECT){
-                    jParser.nextToken();
                     System.out.println(jParser.getText());
                 }
-            } else if(jParser.nextToken() == JsonToken.START_OBJECT){ jParser.skipChildren();}
-            jParser.nextToken();
+            } else if(jParser.nextToken() == JsonToken.START_OBJECT || jParser.nextToken() == JsonToken.START_ARRAY ){ jParser.skipChildren();}
         }
         endTime = System.currentTimeMillis();
         time = endTime - startTime;
