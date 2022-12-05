@@ -37,7 +37,9 @@ public class App {
                         while(jParser.nextToken() != JsonToken.END_OBJECT){
                             if("weapons".equals(jParser.getCurrentName())){
                                 while(jParser.nextToken() != JsonToken.END_ARRAY){
-                                    System.out.println(jParser.getText());
+                                    if(jParser.getValueAsString()!= null &&!jParser.getValueAsString().equals(jParser.getCurrentName())){
+                                        System.out.print(jParser.getValueAsString()+" ");
+                                    }
                                 }
                             }
                         }
@@ -47,6 +49,6 @@ public class App {
         }
         endTime = System.currentTimeMillis();
         time = endTime - startTime;
-        System.out.println(time+"ms");
+        System.out.print("\n"+time+"ms");
     }
 }
