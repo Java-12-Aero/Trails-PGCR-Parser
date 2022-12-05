@@ -32,6 +32,12 @@ public class App {
         while(jParser.nextToken() != null){
             String fieldName = jParser.getCurrentName();
             System.out.println(fieldName);
+            if("activityDetails".equals(fieldName)){
+                while(jParser.nextToken() != JsonToken.END_OBJECT){
+                    jParser.nextToken();
+                    System.out.println(jParser.getText());
+                }
+            } else if(jParser.nextToken() == JsonToken.START_OBJECT){ jParser.skipChildren();}
             jParser.nextToken();
         }
         endTime = System.currentTimeMillis();
