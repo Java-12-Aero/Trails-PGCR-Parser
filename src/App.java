@@ -31,10 +31,9 @@ public class App {
         JsonParser jParser = jFactory.createParser(outStr);
         while(jParser.nextToken() != null){
             String fieldName = jParser.getCurrentName();
-            //System.out.println(fieldName);
             if("activityDetails".equals(fieldName)){
                 while(jParser.nextToken() != JsonToken.END_OBJECT){
-                    System.out.println(jParser.getText());
+                    System.out.println(jParser.getValueAsString()+";");
                 }
             } else if(jParser.nextToken() == JsonToken.START_OBJECT || jParser.nextToken() == JsonToken.START_ARRAY ){ jParser.skipChildren();}
         }
