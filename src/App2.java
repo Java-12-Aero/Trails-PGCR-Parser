@@ -5,8 +5,6 @@ import com.github.luben.zstd.ZstdInputStream;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -23,7 +21,6 @@ public class App2 {
         File file = new File("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9990000000-10000000000.jsonl.zst");
         InputStream stream = new FileInputStream(file);
         ZstdInputStream stream2 = new ZstdInputStream(stream);
-        ObjectMapper mapper = new ObjectMapper();
         JsonFactory jFactory = new JsonFactory();
         int redScore = 0;
         int blueScore = 0;
@@ -47,17 +44,43 @@ public class App2 {
                 JsonParser jParser = jFactory.createParser(outStr);
                 while(jParser.nextToken() != null){
                     if("_id".equals(jParser.getCurrentName())){
+                        System.out.println("got one!");
                         id = jParser.getValueAsLong();
                         while(jParser.nextToken() != JsonToken.END_OBJECT){
                             if("activityDetails".equals(jParser.getCurrentName())){
+                                
                                 while(jParser.nextToken() != JsonToken.END_OBJECT){
                                     if("mode".equals(jParser.getCurrentName())){
                                         if(jParser.getValueAsInt() == 84){
+                                            
                                             while(jParser.nextToken()!=null){
                                                 if("teams".equals(jParser.getCurrentName())){
-                                                    while(jParser.nextToken()!=JsonToken.END_OBJECT){
-                                                        
+                                                    while(jParser.nextToken()!=JsonToken.END_ARRAY){
+                                                        if("score".equals(jParser.getCurrentName())){
+                                                            blueScore = jParser.getValueAsInt();
+                                                        }                                                        
                                                     }
+                                                    jParser.nextToken();
+                                                    while(jParser.nextToken()!=JsonToken.END_ARRAY){
+                                                        if("score".equals(jParser.getCurrentName())){
+                                                            redScore = jParser.getValueAsInt();
+                                                        }                                                        
+                                                    }
+                                                }
+                                            }
+                                            pstmt.setLong(1, id);
+                                            pstmt.setInt(2,blueScore);
+                                            pstmt.setInt(3,redScore);
+                                            pstmt.addBatch();
+                                            batch++;
+                                            if(batch % 1000 == 0){
+                                                try{
+                                                    System.out.println("Writing batch");
+                                                    pstmt.executeBatch();
+                                                    conn.commit();
+                                                    System.out.println("Batch Executed");
+                                                } catch (SQLException e) {
+                                                    System.out.println(e);
                                                 }
                                             }
                                         }
@@ -67,32 +90,19 @@ public class App2 {
                         }
                     }
                 }
-                JsonNode json = mapper.readTree(outStr);
-                //id = json.get("_id").asLong();
-                if(json.get("teams").size() == 2){
-                    blueScore = json.get("teams").get(0).get("score").asInt();
-                    redScore = json.get("teams").get(1).get("score").asInt();
-                    pstmt.setLong(1, id);
-                    pstmt.setInt(2,blueScore);
-                    pstmt.setInt(3,redScore);
-                    pstmt.addBatch();
-                    batch++;
-                    if(batch % 1000 == 0){
-                        try{
-                            System.out.println("Writing batch");
-                            pstmt.executeBatch();
-                            conn.commit();
-                            System.out.println("Batch Executed");
-                        } catch (SQLException e) {
-                            System.out.println(e);
-                        }
-                    }
-                }
             }
         redScore = 0;
         blueScore = 0;
         outStr = "";
         }
     stream2.close();
+    try{
+        System.out.println("Writing batch");
+        pstmt.executeBatch();
+        conn.commit();
+        System.out.println("Batch Executed");
+    } catch (SQLException e) {
+        System.out.println(e);
+    }
     }
 }
