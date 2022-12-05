@@ -31,9 +31,17 @@ public class App {
         JsonParser jParser = jFactory.createParser(outStr);
         while(jParser.nextToken() != null){
             String fieldName = jParser.getCurrentName();
-            if("activityDetails".equals(fieldName)){
-                while(jParser.nextToken() != JsonToken.END_OBJECT){
-                    System.out.println(jParser.getValueAsString()+";");
+            if("entries".equals(fieldName)){
+                while(jParser.nextToken() != null){
+                    if("extended".equals(jParser.getCurrentName())){
+                        while(jParser.nextToken() != JsonToken.END_OBJECT){
+                            if("weapons".equals(jParser.getCurrentName())){
+                                while(jParser.nextToken() != JsonToken.END_ARRAY){
+                                    System.out.println(jParser.getText());
+                                }
+                            }
+                        }
+                    }
                 }
             } else if(jParser.nextToken() == JsonToken.START_OBJECT || jParser.nextToken() == JsonToken.START_ARRAY ){ jParser.skipChildren();}
         }
