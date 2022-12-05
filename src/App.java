@@ -23,7 +23,7 @@ public class App {
         stream2.close();
         long startTime = System.currentTimeMillis();
         JsonNode json = mapper.readTree(outStr);
-        System.out.println(json.get("entries").get(0).get("extended").get("weapons"));
+        System.out.println(json.get("_id"));
         long endTime = System.currentTimeMillis();
         long time = endTime - startTime;
         System.out.println(time + "ms");
@@ -31,21 +31,12 @@ public class App {
         JsonParser jParser = jFactory.createParser(outStr);
         while(jParser.nextToken() != null){
             String fieldName = jParser.getCurrentName();
-            if("entries".equals(fieldName)){
-                while(jParser.nextToken() != null){
-                    if("extended".equals(jParser.getCurrentName())){
-                        while(jParser.nextToken() != JsonToken.END_OBJECT){
-                            if("weapons".equals(jParser.getCurrentName())){
-                                while(jParser.nextToken() != JsonToken.END_ARRAY){
-                                    if(jParser.getValueAsString()!= null &&!jParser.getValueAsString().equals(jParser.getCurrentName())){
-                                        System.out.print(jParser.getValueAsString()+" ");
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            } else if(jParser.nextToken() == JsonToken.START_OBJECT || jParser.nextToken() == JsonToken.START_ARRAY ){ jParser.skipChildren();}
+            if("_id".equals(fieldName) && !jParser.getValueAsString().equals(fieldName)){
+                System.out.println(jParser.getValueAsString());
+            }
+            if(jParser.nextToken() == JsonToken.START_ARRAY || jParser.nextToken() == JsonToken.START_OBJECT){
+                jParser.skipChildren();
+            }
         }
         endTime = System.currentTimeMillis();
         time = endTime - startTime;
