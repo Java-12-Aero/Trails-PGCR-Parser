@@ -14,14 +14,13 @@ public class App3 {
     public static void main(String[] args) throws Exception{
         Connection conn = null;
         try { 
-            String url = "jdbc:sqlite:F:/SQLlite/Databases/Destiny/trials_db.db";
+            String url = "jdbc:sqlite:F:/SQLlite/Databases/Destiny/trials_db.db"; //local db connect
             conn = DriverManager.getConnection(url);
-            
         } catch (SQLException e) {System.out.println(e.getMessage());}
-        File file = new File("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9980000000-9990000000.jsonl.zst");
+        File file = new File("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9980000000-9990000000.jsonl.zst"); //actual file: jsonl file compressed with ZStandard, each new JSON object separated by newline, no newline operators in JSON object
         InputStream stream = new FileInputStream(file);
-        ZstdInputStream stream2 = new ZstdInputStream(stream);
-        JsonFactory jFactory = new JsonFactory();
+        ZstdInputStream stream2 = new ZstdInputStream(stream); //only takes inputstream, overrides the inputstream object
+        JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
         int redScore = 0;
         int blueScore = 0;
         long id = 0L;
@@ -29,22 +28,22 @@ public class App3 {
         int r=0;
         int batch = 0;
         String outStr = "";
-        Statement stmt = conn.createStatement();
+        Statement stmt = conn.createStatement(); //sql statement handling
         try{
             stmt.executeQuery("PRAGMA journal_mode = WAL");
-            stmt.execute("PRAGMA synchronous = 0");
+            stmt.execute("PRAGMA synchronous = 0"); //both of these reduce the safety of writing to the DB but they decrease write time significantly
         } catch (SQLException e) {
             System.out.println(e);
         }
         String sql = "INSERT INTO Matches(PGCRID,BlueScore,RedScore) VALUES(?, ?, ?)";
         PreparedStatement pstmt = conn.prepareStatement(sql);
-        conn.setAutoCommit(false);
+        conn.setAutoCommit(false); //lets me do batch adds for sql
         System.out.println("Started");
         while((r=stream2.read()) != -1){
             //long startTime = System.currentTimeMillis();
             outStr = outStr + (char)r;
             if((char)r == '\n'){
-                JsonParser jParser = jFactory.createParser(outStr);
+                JsonParser jParser = jFactory.createParser(outStr); //allows the parser to move through the finalized string
                 while(jParser.nextToken() != null){
                     if("_id".equals(jParser.getCurrentName())){ 
                         jParser.nextToken();
@@ -59,7 +58,7 @@ public class App3 {
                         }
                     }
                     if("players".equals(jParser.getCurrentName())){
-                        jParser.skipChildren();
+                        jParser.skipChildren(); //skips data I don't care about when parsing
                     }
                     if(mode == 84){
                         if("score".equals(jParser.getCurrentName())){
@@ -71,17 +70,17 @@ public class App3 {
                             }
                         }
                     } else if(mode==-1){
-                        jParser.skipChildren();
+                        jParser.skipChildren(); //skips data I don't care about when parsing
                     }
                 }
                 if(mode == 84){
                     pstmt.setLong(1, id);
                     pstmt.setInt(2,blueScore);
                     pstmt.setInt(3,redScore);
-                    pstmt.addBatch();
+                    pstmt.addBatch(); //creates the statement then adds to batch
                     batch++;
                     //System.out.println(batch);
-                    if(batch % 100 == 0){
+                    if(batch % 100 == 0){ //executes batch
                         System.out.println(id);
                         try{
                             System.out.println("Writing batch");
@@ -95,6 +94,7 @@ public class App3 {
                 }
                 //long endTime = System.currentTimeMillis();
                 //System.out.println(endTime-startTime+"ms");
+                //cleanup stuff
                 blueScore = 0;
                 redScore = 0;
                 mode = 0;
@@ -103,6 +103,7 @@ public class App3 {
             }
         }
         stream2.close();
+        //catches any dangling datapoints
         try{
             System.out.println("Writing batch");
             pstmt.executeBatch();
