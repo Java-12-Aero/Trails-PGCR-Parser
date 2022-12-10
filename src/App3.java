@@ -18,7 +18,7 @@ public class App3 {
             conn = DriverManager.getConnection(url);
             
         } catch (SQLException e) {System.out.println(e.getMessage());}
-        File file = new File("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9990000000-10000000000.jsonl.zst");
+        File file = new File("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9980000000-9990000000.jsonl.zst");
         InputStream stream = new FileInputStream(file);
         ZstdInputStream stream2 = new ZstdInputStream(stream);
         JsonFactory jFactory = new JsonFactory();
@@ -39,12 +39,13 @@ public class App3 {
         String sql = "INSERT INTO Matches(PGCRID,BlueScore,RedScore) VALUES(?, ?, ?)";
         PreparedStatement pstmt = conn.prepareStatement(sql);
         conn.setAutoCommit(false);
+        System.out.println("Started");
         while((r=stream2.read()) != -1){
-            long startTime = System.currentTimeMillis();
+            //long startTime = System.currentTimeMillis();
             outStr = outStr + (char)r;
             if((char)r == '\n'){
                 JsonParser jParser = jFactory.createParser(outStr);
-                while(jParser.nextToken() != JsonToken.END_OBJECT){
+                while(jParser.nextToken() != null){
                     if("_id".equals(jParser.getCurrentName())){ 
                         jParser.nextToken();
                         id = jParser.getValueAsLong();
@@ -57,20 +58,17 @@ public class App3 {
                             mode = -1;
                         }
                     }
+                    if("players".equals(jParser.getCurrentName())){
+                        jParser.skipChildren();
+                    }
                     if(mode == 84){
-                        if("teams".equals(jParser.getCurrentName())){
-                            while(jParser.nextToken() != JsonToken.END_OBJECT){
-                                if("score".equals(jParser.getCurrentName())){
-                                    jParser.nextToken();
-                                    if(blueScore == 0){
-                                        blueScore = jParser.getValueAsInt();
-                                    } else {
-                                        redScore = jParser.getValueAsInt();
-                                    }
-                                }
+                        if("score".equals(jParser.getCurrentName())){
+                            jParser.nextToken();
+                            if(blueScore == 0){
+                                blueScore = jParser.getValueAsInt();
+                            } else {
+                                redScore = jParser.getValueAsInt();
                             }
-                        } else {
-                            jParser.skipChildren();
                         }
                     } else if(mode==-1){
                         jParser.skipChildren();
@@ -83,7 +81,8 @@ public class App3 {
                     pstmt.addBatch();
                     batch++;
                     //System.out.println(batch);
-                    if(batch % 1000 == 0){
+                    if(batch % 100 == 0){
+                        System.out.println(id);
                         try{
                             System.out.println("Writing batch");
                             pstmt.executeBatch();
@@ -94,8 +93,8 @@ public class App3 {
                         }
                     }
                 }
-                long endTime = System.currentTimeMillis();
-                System.out.println(endTime-startTime+"ms");
+                //long endTime = System.currentTimeMillis();
+                //System.out.println(endTime-startTime+"ms");
                 blueScore = 0;
                 redScore = 0;
                 mode = 0;
