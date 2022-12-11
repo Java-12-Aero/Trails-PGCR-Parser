@@ -168,7 +168,11 @@ public class App3 {
         return stream2;
     }
     public static void main(String[] args) throws Exception{
-        readFile reader = new readFile("9980000000-9990000000");
-        reader.start();
+        for(long i = 5400000000L; i<10000000000L; i+= 10000000L){
+            String name = String.format("%d-%d",i,i+10000000L);
+            readFile reader = new readFile(name);
+            reader.start();
+        }
+        
     }
 }
