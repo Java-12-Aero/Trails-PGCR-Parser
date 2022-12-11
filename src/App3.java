@@ -3,12 +3,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 
 import com.github.luben.zstd.ZstdInputStream;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -31,17 +30,16 @@ public class App3 {
     }
     public static void main(String[] args) throws Exception{
         Connection conn = connectDB();
-        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9980000000-9990000000.jsonl.zst");
+        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9970000000-9980000000.jsonl.zst");
         JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
-        int redScore = 0;
-        int blueScore = 0;
-        long id = 0L;
-        int mode = 0;
-        int r=0;
-        int batch = 0;
-        String outStr = "";
+        JsonParser jParser = jFactory.createParser(stream2);
         long startTime;
         long endTime;
+        Long id = 0L;
+        int mode = 0;
+        int blueScore = 0;
+        int redScore = 0;
+        int batch = 0;
         Statement stmt = conn.createStatement(); //sql statement handling
         try{
             stmt.executeQuery("PRAGMA journal_mode = WAL");
@@ -53,24 +51,48 @@ public class App3 {
         PreparedStatement pstmt = conn.prepareStatement(sql);
         conn.setAutoCommit(false); //lets me do batch adds for sql
         System.out.println("Started");
-        while((r=stream2.read()) != -1){
-            startTime = System.currentTimeMillis();
-            //outStr = outStr + (char)r;
-            System.out.println((char)r);
-            endTime = System.currentTimeMillis();
-            if(endTime-startTime > 5){
-                System.out.println("Stalled!");
-                Thread.sleep(10000);
+        while(jParser.nextValue() != null){
+            if("_id".equals(jParser.getCurrentName())){
+                if(mode == 84){
+                    batch++;
+                    pstmt.setLong(1,id);
+                    pstmt.setInt(2,blueScore);
+                    pstmt.setInt(3,redScore);
+                    pstmt.addBatch();
+                    if(batch % 10000 == 0){
+                        try{
+                            pstmt.executeBatch();
+                            conn.commit();
+                        } catch (SQLException e){
+                            System.out.println(e);
+                        }
+                    }
+                }
+                id = jParser.getValueAsLong();
+                mode = 0;
+                blueScore = 0;
+                redScore = 0;
+            }
+            if("entries".equals(jParser.getCurrentName())){
+                jParser.skipChildren();
+            }
+            if("mode".equals(jParser.getCurrentName())){
+                mode = jParser.getIntValue();
+            }
+            if(mode == 84 && "score".equals(jParser.getCurrentName())){
+                if(blueScore == 0){
+                    blueScore = jParser.getIntValue();
+                } else {
+                    redScore = jParser.getIntValue();
+                }
             }
         }
         stream2.close();
-        //catches any dangling datapoints
+        System.out.println(id);
         try{
-            System.out.println("Writing batch");
             pstmt.executeBatch();
             conn.commit();
-            System.out.println("Batch Executed");
-        } catch (SQLException e) {
+        } catch (SQLException e){
             System.out.println(e);
         }
     }
