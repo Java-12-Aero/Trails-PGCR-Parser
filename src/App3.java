@@ -17,7 +17,6 @@ import java.sql.PreparedStatement;
 class readFile implements Runnable{
     private Thread t;
     private String fileName;
-    private String path;
     static Connection connectDB(){
         Connection conn = null;
         try { 
@@ -34,62 +33,10 @@ class readFile implements Runnable{
     }
     readFile(String name){
         fileName = name;
-        path = String.format("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\%s.jsonl.zst",fileName);
+        
     }
     public void run(){
-        try{
-            Connection conn = connectDB();
-            ZstdInputStream stream = getZstdStream(path);
-            JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
-            JsonParser jParser = jFactory.createParser(stream);
-            Long id = 0L;
-            int mode = 0;
-            int blueScore = 0;
-            int redScore = 0;
-            int batch = 0;
-            String sql = "INSERT INTO Matches(PGCRID,BlueScore,RedScore) VALUES(?, ?, ?)";
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-            conn.setAutoCommit(false); //lets me do batch adds for sql
-            System.out.println("Started");
-            while(jParser.nextValue() != null){
-                if("_id".equals(jParser.getCurrentName())){
-                    if(mode == 84){
-                        batch++;
-                        pstmt.setLong(1,id);
-                        pstmt.setInt(2,blueScore);
-                        pstmt.setInt(3,redScore);
-                        pstmt.addBatch();
-                        if(batch % 10000 == 0){
-                            writeDB writer = new writeDB(pstmt);
-                            writer.start();
-                        }
-                    }
-                    id = jParser.getValueAsLong();
-                    mode = 0;
-                    blueScore = 0;
-                    redScore = 0;
-                }
-                if("entries".equals(jParser.getCurrentName())){
-                    jParser.skipChildren();
-                }
-                if("mode".equals(jParser.getCurrentName())){
-                    mode = jParser.getIntValue();
-                }
-                if(mode == 84 && "score".equals(jParser.getCurrentName())){
-                    if(blueScore == 0){
-                        blueScore = jParser.getIntValue();
-                    } else {
-                        redScore = jParser.getIntValue();
-                    }
-                }
-            }
-            stream.close();
-            System.out.println(id);
-            writeDB writer = new writeDB(pstmt);
-            writer.start();
-        } catch (Exception e) {
-            System.out.println(e);
-        }
+        
     }
     public void start(){
         if(t==null){
@@ -161,8 +108,60 @@ public class App3 {
     public static void main(String[] args) throws Exception{
         for(long i = 5400000000L; i<10000000000L; i+= 10000000L){
             String name = String.format("%d-%d",i,i+10000000L);
-            readFile reader = new readFile(name);
-            reader.start();
+            try{
+                String path = String.format("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\%s.jsonl.zst",name);
+                Connection conn = connectDB();
+                ZstdInputStream stream = getZstdStream(path);
+                JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
+                JsonParser jParser = jFactory.createParser(stream);
+                Long id = 0L;
+                int mode = 0;
+                int blueScore = 0;
+                int redScore = 0;
+                int batch = 0;
+                String sql = "INSERT INTO Matches(PGCRID,BlueScore,RedScore) VALUES(?, ?, ?)";
+                PreparedStatement pstmt = conn.prepareStatement(sql);
+                conn.setAutoCommit(false); //lets me do batch adds for sql
+                System.out.println("Started");
+                while(jParser.nextValue() != null){
+                    if("_id".equals(jParser.getCurrentName())){
+                        if(mode == 84){
+                            batch++;
+                            pstmt.setLong(1,id);
+                            pstmt.setInt(2,blueScore);
+                            pstmt.setInt(3,redScore);
+                            pstmt.addBatch();
+                            if(batch % 10000 == 0){
+                                writeDB writer = new writeDB(pstmt);
+                                writer.start();
+                            }
+                        }
+                        id = jParser.getValueAsLong();
+                        mode = 0;
+                        blueScore = 0;
+                        redScore = 0;
+                    }
+                    if("entries".equals(jParser.getCurrentName())){
+                        jParser.skipChildren();
+                    }
+                    if("mode".equals(jParser.getCurrentName())){
+                        mode = jParser.getIntValue();
+                    }
+                    if(mode == 84 && "score".equals(jParser.getCurrentName())){
+                        if(blueScore == 0){
+                            blueScore = jParser.getIntValue();
+                        } else {
+                            redScore = jParser.getIntValue();
+                        }
+                    }
+                }
+                stream.close();
+                System.out.println(id);
+                writeDB writer = new writeDB(pstmt);
+                writer.start();
+            } catch (Exception e) {
+                System.out.println(e);
+            }
         }
         
     }
