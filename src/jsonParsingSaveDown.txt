@@ -1,0 +1,59 @@
+if((char)r == '\n'){
+                JsonParser jParser = jFactory.createParser(outStr); //allows the parser to move through the finalized string
+                while(jParser.nextToken() != null){
+                    if("_id".equals(jParser.getCurrentName())){ 
+                        jParser.nextToken();
+                        id = jParser.getValueAsLong();
+                    }
+                    if("mode".equals(jParser.getCurrentName())){
+                        jParser.nextToken();
+                        if(jParser.getValueAsInt() == 84){
+                            mode = 84;
+                        } else{
+                            mode = -1;
+                        }
+                    }
+                    if("players".equals(jParser.getCurrentName())){
+                        jParser.skipChildren(); //skips data I don't care about when parsing
+                    }
+                    if(mode == 84){
+                        if("score".equals(jParser.getCurrentName())){
+                            jParser.nextToken();
+                            if(blueScore == 0){
+                                blueScore = jParser.getValueAsInt();
+                            } else {
+                                redScore = jParser.getValueAsInt();
+                            }
+                        }
+                    } else if(mode==-1){
+                        jParser.skipChildren(); //skips data I don't care about when parsing
+                    }
+                }
+                if(mode == 84){
+                    pstmt.setLong(1, id);
+                    pstmt.setInt(2,blueScore);
+                    pstmt.setInt(3,redScore);
+                    pstmt.addBatch(); //creates the statement then adds to batch
+                    batch++;
+                    //System.out.println(batch);
+                    if(batch % 100 == 0){ //executes batch
+                        System.out.println(id);
+                        try{
+                            System.out.println("Writing batch");
+                            pstmt.executeBatch();
+                            conn.commit();
+                            System.out.println("Batch Executed");
+                        } catch (SQLException e) {
+                            System.out.println(e);
+                        }
+                    }
+                }
+                //long endTime = System.currentTimeMillis();
+                //System.out.println(endTime-startTime+"ms");
+                //cleanup stuff
+                blueScore = 0;
+                redScore = 0;
+                mode = 0;
+                outStr = "";
+                id = 0L;
+            }
