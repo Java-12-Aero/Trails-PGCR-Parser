@@ -30,7 +30,7 @@ public class App3 {
     }
     public static void main(String[] args) throws Exception{
         Connection conn = connectDB();
-        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9970000000-9980000000.jsonl.zst");
+        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9960000000-9970000000.jsonl.zst");
         JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
         JsonParser jParser = jFactory.createParser(stream2);
         long startTime;
@@ -60,6 +60,7 @@ public class App3 {
                     pstmt.setInt(3,redScore);
                     pstmt.addBatch();
                     if(batch % 10000 == 0){
+                        System.out.println("writing");
                         try{
                             pstmt.executeBatch();
                             conn.commit();
