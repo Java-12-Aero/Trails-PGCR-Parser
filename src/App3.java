@@ -6,7 +6,6 @@ import java.io.InputStream;
 
 import com.github.luben.zstd.ZstdInputStream;
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 
 import java.sql.Connection;
@@ -19,7 +18,6 @@ class readFile implements Runnable{
     private Thread t;
     private String fileName;
     private String path;
-    private ZstdInputStream stream;
     static Connection connectDB(){
         Connection conn = null;
         try { 
@@ -37,13 +35,6 @@ class readFile implements Runnable{
     readFile(String name){
         fileName = name;
         path = String.format("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\%s.jsonl.zst",fileName);
-        try {
-            stream = getZstdStream(path);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
     public void run(){
         try{
