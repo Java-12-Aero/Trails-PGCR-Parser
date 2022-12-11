@@ -13,6 +13,39 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.PreparedStatement;
+
+class writeDB implements Runnable {
+    private Thread t;
+    private PreparedStatement pstmt;
+    private Connection conn = connectDB();
+    writeDB(PreparedStatement statement){
+        pstmt = statement;
+    }
+    static Connection connectDB(){
+        Connection conn = null;
+        try { 
+            String url = "jdbc:sqlite:F:/SQLlite/Databases/Destiny/trials_db.db"; //local db connect
+            conn = DriverManager.getConnection(url);
+        } catch (SQLException e) {System.out.println(e.getMessage());}
+        return conn;
+    }
+    public void run(){
+        System.out.println("writing");
+        try {
+            pstmt.executeBatch();
+            conn.commit();
+        } catch (SQLException e) {
+            System.out.println(e);
+        }
+    }
+    public void start(){
+        if(t==null){
+            t = new Thread(this, "batchWriter");
+            t.start();
+        }
+    }
+}
+
 public class App3 {
     static Connection connectDB(){
         Connection conn = null;
@@ -30,11 +63,9 @@ public class App3 {
     }
     public static void main(String[] args) throws Exception{
         Connection conn = connectDB();
-        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9960000000-9970000000.jsonl.zst");
+        ZstdInputStream stream2 = getZstdStream("E:\\QBit Torrents\\PGCRS\\bungo-pgcr\\9980000000-9990000000.jsonl.zst");
         JsonFactory jFactory = new JsonFactory(); //for actually parsing the JSON
         JsonParser jParser = jFactory.createParser(stream2);
-        long startTime;
-        long endTime;
         Long id = 0L;
         int mode = 0;
         int blueScore = 0;
@@ -60,13 +91,8 @@ public class App3 {
                     pstmt.setInt(3,redScore);
                     pstmt.addBatch();
                     if(batch % 10000 == 0){
-                        System.out.println("writing");
-                        try{
-                            pstmt.executeBatch();
-                            conn.commit();
-                        } catch (SQLException e){
-                            System.out.println(e);
-                        }
+                        writeDB writer = new writeDB(pstmt);
+                        writer.start();
                     }
                 }
                 id = jParser.getValueAsLong();
@@ -90,11 +116,7 @@ public class App3 {
         }
         stream2.close();
         System.out.println(id);
-        try{
-            pstmt.executeBatch();
-            conn.commit();
-        } catch (SQLException e){
-            System.out.println(e);
-        }
+        writeDB writer = new writeDB(pstmt);
+        writer.start();
     }
 }
